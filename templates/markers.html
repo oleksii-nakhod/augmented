@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% block content %}
+    <div class="container-fluid">
+    <h1 class="mt-4">AR Markers</h1>
+    <a href="{{ url_for('upload') }}" class="btn btn-primary mb-4">Upload New Marker</a>
+    <div class="row">
+        {% for marker in markers %}
+        <div class="col-12 col-lg-4 mb-4">
+            <div class="card">
+                <img src="{{ url_for('uploaded_file', filename=marker['marker-image']) }}" class="card-img-top" alt="Marker Image">
+                <div class="card-body">
+                    <div class="d-flex justify-content-center gap-4">
+                        {% if marker['marker-image'] %}
+                        <a href="{{ url_for('uploaded_file', filename=marker['image']) }}" class="btn btn-primary">View Image</a>
+                        {% endif %}
+                        <a href="#" class="btn btn-danger" onclick="confirmDelete('{{ marker['_id'] }}')">Delete</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    </div>
+{% endblock %}

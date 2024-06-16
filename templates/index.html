@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<a-scene xr-mode-ui="enabled: false">
+    {% for marker in markers %}
+        <a-marker
+            id="marker-{{ loop.index }}"
+            type="pattern"
+            url="uploads/{{ marker['marker'] }}"
+            emitevents="true"
+            registerevents
+        >
+            <a-entity
+                id="model-{{ loop.index }}"
+                gltf-model="uploads/{{ marker['model'] }}"
+                animation-mixer
+                rotation="0 90 0"
+                scale="0.5 0.5 0.5"
+                model-loaded
+                sound="src: uploads/{{ marker['audio'] }}; loop: true"
+            ></a-entity>
+        </a-marker>
+    {% endfor %}
+    <a-entity camera></a-entity>
+</a-scene>
+
+<script>
+    AFRAME.registerComponent('model-loaded', {
+        init: function() {
+            const model = this.el;
+            
+            model.addEventListener('model-loaded', function() {
+                const box = new THREE.Box3().setFromObject(model.object3D);
+                const size = box.getSize(new THREE.Vector3());
+                const maxDimension = Math.max(size.x, size.y, size.z);
+                
+                const desiredSize = 3;
+                const scaleFactor = desiredSize / maxDimension;
+                
+                model.setAttribute('scale', `${scaleFactor} ${scaleFactor} ${scaleFactor}`);
+            });
+        }
+    });
+
+    AFRAME.registerComponent('registerevents', {
+        init: function() {
+            const marker = this.el;
+            const modelId = marker.id.replace('marker', 'model');
+            const model = document.getElementById(modelId);
+            const sound = model.components.sound;
+            
+            marker.addEventListener('markerFound', function() {
+                sound.playSound();
+            });
+            
+            marker.addEventListener('markerLost', function() {
+                sound.pauseSound();
+            });
+        }
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid">
+    <h1 class="mt-4">Upload AR Marker</h1>
+    <form id="upload-form" enctype="multipart/form-data">
+        <div class="form-group mb-3">
+            <label for="image-input">Image:</label>
+            <input type="file" id="image-input" accept="image/*" name="image" required>
+            <div id="image-preview" class="mt-2">
+                <img id="image-preview-element" src="#" alt="Image Preview" class="img-fluid" style="display: none; max-width: 500px; height: auto;">
+            </div>
+        </div>
+        <div class="form-group mb-3">
+            <label for="audio-input">Audio:</label>
+            <input type="file" id="audio-input" name="audio" accept="audio/*">
+            <div id="audio-preview" class="mt-2">
+                <audio id="audio-preview-element" controls style="display: none;">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+        </div>
+        <div class="form-group mb-3">
+            <label for="model-input">Model:</label>
+            <input type="file" id="model-input" name="model" accept=".glb" required>
+            <div id="model-preview"></div>
+        </div>
+        <div>
+            <button type="button" id="create-marker-button" class="btn btn-primary">Create Marker</button>
+            <div id="spinner-create-marker" class="spinner-border text-primary d-none" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </form>
+    <a href="{{ url_for('markers') }}" class="btn btn-secondary mt-3">Back to Markers</a>
+</div>
+
+<script>
+    var innerImageURL = null;
+    var fullMarkerURL = null;
+
+    const spinnerCreateMarker = document.querySelector('#spinner-create-marker');
+
+    document.getElementById('image-input').addEventListener('change', function(event) {
+        const imagePreviewElement = document.getElementById('image-preview-element');
+        var file = event.target.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            innerImageURL = e.target.result;
+            imagePreviewElement.src = e.target.result;
+            imagePreviewElement.style.display = 'block';
+            generateFullMarkerURL();
+        }
+        reader.readAsDataURL(file);
+    });
+
+    document.getElementById('audio-input').addEventListener('change', function(event) {
+        const audioPreviewElement = document.getElementById('audio-preview-element');
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                audioPreviewElement.src = e.target.result;
+                audioPreviewElement.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+
+    function generateFullMarkerURL() {
+        THREEx.ArPatternFile.buildFullMarker(innerImageURL, 0.5, 512, 'black', function(markerUrl) {
+            fullMarkerURL = markerUrl;
+        });
+    }
+
+    document.getElementById('create-marker-button').addEventListener('click', handleCreateMarker);
+
+    function handleCreateMarker() {
+        if (innerImageURL === null) {
+            alert('Please upload an image first');
+            return;
+        }
+
+        spinnerCreateMarker.classList.remove('d-none');
+
+        THREEx.ArPatternFile.encodeImageURL(innerImageURL, encodeImageCallback);
+    }
+
+    function encodeImageCallback(patternFileString) {
+        var formData = new FormData(document.getElementById('upload-form'));
+        formData.append('marker', new Blob([patternFileString], { type: 'application/octet-stream' }), 'marker.patt');
+
+        fetch(fullMarkerURL)
+            .then(response => response.blob())
+            .then(blob => appendMarkerImageAndUpload(formData, blob))
+            .catch(error => {
+                alert('Error converting marker image');
+                console.error('Error:', error);
+            });
+    }
+
+    function appendMarkerImageAndUpload(formData, blob) {
+        formData.append('marker-image', blob, 'marker-image.png');
+
+        fetch("{{ url_for('upload') }}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            spinnerCreateMarker.classList.add('d-none');
+            if (response.ok) {
+                window.location.href = "{{ url_for('markers') }}";
+            } else {
+                alert('Error uploading files');
+            }
+        })
+        .catch(error => {
+            spinnerCreateMarker.classList.add('d-none');
+            alert('Error uploading files');
+            console.error('Error:', error);
+        });
+    }
+
+</script>
+
+{% endblock %}

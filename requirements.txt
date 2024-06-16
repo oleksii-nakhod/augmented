@@ -1,0 +1,6 @@
+Flask
+pymongo[srv]
+Flask-PyMongo
+Flask-WTF
+shortuuid
+opencv-python
